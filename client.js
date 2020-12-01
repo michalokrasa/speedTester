@@ -12,7 +12,7 @@ class Client {
         this.isRunning = false;
 
         // UDP client init
-        this.udp = dgram.createSocket({ type: 'udp4'});
+        this.udp = dgram.createSocket({ type: 'udp4', reuseAddr: true});
         this.udp.on("error", (err) => {
             console.log("UDP: error");
             console.log(err);
@@ -40,9 +40,8 @@ class Client {
         // TCP client init
         this.tcp = new net.Socket();
         this.tcp.connect({
-            address: this.ip, 
-            port: this.port,
-            family: 4
+            host: this.ip, 
+            port: this.port
         }, () => {
             console.log("TCP: connected");
         });
