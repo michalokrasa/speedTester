@@ -4,7 +4,7 @@ const sample = require("./dataSample");
 
 const DISCOVERY_GROUP = "233.255.255.253";
 const DISCOVERY_PORT = 4000;
-
+const TRANSFER_RATE = 1; // ms between packets send
 
 class Client {
     constructor() {
@@ -22,7 +22,10 @@ class Client {
         })
         this.udp.on("message", (buff, rinfo) => {
             if (/OFFER:/.test(buff)) {
-                this.discoveredServers.push(buff.toString().split(":")[1]);
+                this.discoveredServers.push({
+                    address: rinfo.address,
+                    port: buff.toString().split(":")[1]
+                });
                 console.log("Server discovered, available servers:");
                 console.log(this.discoveredServers)
             }
@@ -31,12 +34,16 @@ class Client {
         
     };
 
-    connect(ip, serverPort) {
-        this.ip = ip;
-        this.port = this.discoveredServers[serverPort];
+    connect(server) {
+        this.ip = this.discoveredServers[server].address;
+        this.port = this.discoveredServers[server].port;
         // TCP client init
         this.tcp = new net.Socket();
-        this.tcp.connect({address: this.ip, port: this.port}, () => {
+        this.tcp.connect({
+            address: this.ip, 
+            port: this.port,
+            family: 4
+        }, () => {
             console.log("TCP: connected");
         });
         this.tcp.on("error", (err) => {
@@ -56,12 +63,12 @@ class Client {
         this.udpTransmission = setInterval(() => {
             this.udp.send(this.dataBuffer, this.port, this.ip);
             console.log("UDP: sent");
-        }, 1);
+        }, TRANSFER_RATE);
 
         this.tcpTransmission = setInterval(() => {
             this.tcp.write(this.dataBuffer);
             console.log("TCP: sent");
-        }, 1);
+        }, TRANSFER_RATE);
         console.log("Transmission started.");
     };
 
@@ -98,7 +105,7 @@ module.exports = {
 const client = new Client();
 client.discover();
 setTimeout(() => {
-    client.connect("0.0.0.0", 0);
+    client.connect(0);
     //client.setNagle(true);
     client.setDataBuffer(5);
     client.startTransmission();
